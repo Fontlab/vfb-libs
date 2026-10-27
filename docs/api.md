@@ -32,6 +32,28 @@ upper nibble of the packed node byte: smooth is bit 0; an open move is bit 3.
 Coordinates are absolute in decoded data. Components retain glyph indices and
 per-master scale/offset vectors. References require the original glyph order.
 
+## Angle conventions
+
+Record **1029** (`italic_angle`) is measured in degrees using the VFB/PostScript
+convention: **negative leans right, positive leans left, zero is upright**. All
+three libraries preserve this sign in decoded records and compatible JSON.
+
+Negate the value once when adapting it to a consumer that uses positive-for-right
+angles: -7° becomes +7°, and +7° becomes -7°. For a decoded numeric value `angle`:
+
+| Language | Positive-right conversion |
+| --- | --- |
+| TypeScript | `const uiAngle = angle === 0 ? 0 : -angle;` |
+| Python | `ui_angle = 0.0 if angle == 0 else -angle` |
+| Rust | `let ui_angle = if angle == 0.0 { 0.0 } else { -angle };` |
+
+Keep the source value for consumers using the VFB/PostScript convention. Missing
+metadata stays absent; choosing a display default belongs to the application.
+Do not use an absolute value or overwrite the decoded record with a display value.
+The supplied outlines, component matrices, and guides are already positioned;
+changing the metadata convention must not transform them. Record **1047**
+(`slant_angle`) is a separate field, not an alias for `italic_angle`.
+
 ## Errors and limits
 
 `VfbError` carries `code`, `offset`, and `recordId` / `record_id`. Rust wraps it in
