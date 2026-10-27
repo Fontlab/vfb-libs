@@ -1,5 +1,13 @@
 # VFB wire format used here
 
+FontLab's VFB implementation is the semantic baseline. Readers expose stored data
+and preserve unknown bytes; they do not synthesize authoring metadata or perform
+editor-specific repairs. Internal fallbacks required to decode a legacy file do
+not become fields presented as if they were stored. UI sign conversions, caret
+centering, and optional hint processing belong in downstream adapters. The pinned
+vfbLib implementation is a JSON-shape and differential reference; documented
+FontLab semantics take precedence when the implementations disagree.
+
 Multi-byte fixed-width values are little endian except the long encoded integer.
 
 | Offset | Field |

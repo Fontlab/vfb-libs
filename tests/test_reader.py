@@ -27,6 +27,21 @@ class ReaderTests(unittest.TestCase):
         with self.assertRaisesRegex(VfbError, "invalid_encoding"):
             decode(read(damaged))
 
+    def test_fontlab_colorref_and_absent_metadata(self):
+        document = decode(read(ROOT / "guide-colors.vfb"))
+        for record in document.records:
+            if record.id in (1296, 2031):
+                self.assertEqual(
+                    [g.get("color") for g in record.value["h"]],
+                    ["#ff0000", "#ff5f5f", "#00ff00", None, "#000000"],
+                )
+        version = next(
+            r.value
+            for r in decode(read(ROOT / "metadata-absent.vfb")).records
+            if r.id == 10
+        )
+        self.assertEqual(version, {})
+
     def test_all_truncations(self):
         b = (ROOT / "static.vfb").read_bytes()
         for n in range(len(b)):

@@ -1,11 +1,12 @@
 # Compatibility profile: vfblib-927199c
 
-The target is Python vfbLib commit
+The JSON-shape reference is Python vfbLib commit
 `927199c1705555add6786aee1de77df847d21dc9`, not its moving main branch and not the
 Rust reader's currently different JSON profile. The envelope is `{header, entries}`;
 each entry is a one-key object, preserving duplicates and input order. Binary
 fallbacks use lowercase, space-separated hex. Decoded supported records use the
-reference field names and shapes. No GPL implementation is linked or vendored.
+reference field names and shapes. No GPL implementation is linked or vendored. FontLab's VFB implementation is the semantic authority; matching a reference output must
+not change the meaning of stored data or fabricate metadata.
 
 This preview is **not a universal drop-in replacement for vfbLib**. The coverage
 matrix defines which records have compatible decoded output. Raw-only entries
@@ -14,6 +15,15 @@ FL3 records may be richer than the reference's raw fallback. Python/Rust/TS APIs
 are similar to one another, not source-compatible with Jens's mutable `Vfb` class.
 
 Intentional differences:
+
+- Guide colors use FontLab COLORREF semantics: low bytes are red, green, blue;
+  the high byte is ignored, not interpreted as alpha. Only -1 means unspecified.
+  The pinned reference formats words wider than 24 bits incorrectly and omits
+  other negative words. The differential harness checks the stored word independently.
+- Application-version records contain only the fields present on wire. Missing
+  platform, version, or owner fields are not filled with synthetic values. The
+  internal default bitmap polarity is PC, as in FontLab; this does not add a
+  platform field to the decoded document.
 
 - Negative bitmap upper-x bounds stay signed in the semantic document and JSON.
   The pinned reference converts this field to unsigned, producing values near

@@ -545,7 +545,7 @@ fn special(kind: &str, c: &mut Cursor, masters: usize) -> Result<Value> {
             Ok(v)
         }
         "version" => {
-            let mut v = json!({"platform":"macos","version":[5,2,2,128],"owner":0});
+            let mut v = json!({});
             while c.remaining() > 0 {
                 let key = c.byte()?;
                 if key == 0 {
@@ -553,7 +553,13 @@ fn special(kind: &str, c: &mut Cursor, masters: usize) -> Result<Value> {
                 }
                 let n = c.ev()?;
                 match key {
-                    1 => v["platform"] = json!(if n == 0 { "windows" } else { "macos" }),
+                    1 => {
+                        v["platform"] = match n {
+                            0 => json!("windows"),
+                            1 => json!("macos"),
+                            _ => json!(n),
+                        }
+                    }
                     2 => v["version"] = json!([24, 16, 8, 0].map(|s| ((n as u32) >> s) & 255)),
                     3 => v["owner"] = json!(n),
                     _ => (),
@@ -632,9 +638,14 @@ fn special(kind: &str, c: &mut Cursor, masters: usize) -> Result<Value> {
                     let color = c.ev()?;
                     let name = c.ptext()?;
                     let mut g = json!({"index":index});
-                    if color >= 0 {
-                        let h = format!("{color:06x}");
-                        g["color"] = json!(format!("#{}{}{}", &h[4..], &h[2..4], &h[..2]));
+                    if color != -1 {
+                        let word = color as u32;
+                        g["color"] = json!(format!(
+                            "#{:02x}{:02x}{:02x}",
+                            word & 255,
+                            (word >> 8) & 255,
+                            (word >> 16) & 255
+                        ));
                     }
                     if !name.is_empty() {
                         g["name"] = json!(name)
@@ -774,7 +785,7 @@ fn schema(s: &Value, c: &mut Cursor, masters: usize) -> Result<Value> {
 pub fn decode(doc: &mut VfbDocument) -> Result<()> {
     let mut masters = 1;
     let mut encoding = encoding_rs::UTF_8;
-    let mut windows = false;
+    let mut windows = true; // FontLab defaults bitmap polarity to the PC platform.
     doc.diagnostics.clear();
     for r in &mut doc.records {
         let s = registry()[r.id.to_string()]["schema"].clone();
@@ -797,15 +808,17 @@ pub fn decode(doc: &mut VfbDocument) -> Result<()> {
                 .push(json!({"code":"retained_raw","record_id":r.id,"offset":r.offset}));
         }
         if r.id == 10 {
-            windows = r.value["platform"] == "windows";
-            let n = r.value["version"]
+            if r.value.get("platform").is_some() {
+                windows = r.value["platform"] == "windows";
+            }
+            let version = r.value["version"]
                 .as_array()
-                .unwrap()
-                .iter()
-                .fold(0u64, |a, b| a * 256 + b.as_u64().unwrap());
+                .map(|v| v.iter().fold(0u64, |a, b| a * 256 + b.as_u64().unwrap()));
+            let old_mac =
+                r.value["platform"] == "macos" && version.is_some_and(|v| v <= 0x05000480);
             encoding = if r.value["platform"] == "windows" {
                 encoding_rs::WINDOWS_1252
-            } else if n <= 0x05000480 {
+            } else if old_mac {
                 encoding_rs::MACINTOSH
             } else {
                 encoding_rs::UTF_8
@@ -850,6 +863,29 @@ mod tests {
         assert_eq!(
             doc.records.iter().find(|r| r.id == 30000).unwrap().raw,
             b"opaque\0\xff"
+        );
+    }
+    #[test]
+    fn fontlab_colors_and_absent_metadata() {
+        let mut doc = read(include_bytes!("test-data/guide-colors.vfb")).unwrap();
+        decode(&mut doc).unwrap();
+        for record in doc.records.iter().filter(|r| r.id == 1296 || r.id == 2031) {
+            let colors: Vec<Value> = record.value["h"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|g| g["color"].clone())
+                .collect();
+            assert_eq!(
+                json!(colors),
+                json!(["#ff0000", "#ff5f5f", "#00ff00", null, "#000000"])
+            );
+        }
+        let mut doc = read(include_bytes!("test-data/metadata-absent.vfb")).unwrap();
+        decode(&mut doc).unwrap();
+        assert_eq!(
+            doc.records.iter().find(|r| r.id == 10).unwrap().value,
+            json!({})
         );
     }
     #[test]

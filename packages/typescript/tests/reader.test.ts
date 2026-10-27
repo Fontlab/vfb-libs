@@ -38,3 +38,35 @@ Deno.test("source ownership and payload offsets", () => {
     );
   }
 });
+Deno.test("FontLab colors and absent metadata are decoded without synthesized values", async () => {
+  const document = decode(
+    read(
+      await Deno.readFile(
+        new URL("../../../tests/fixtures/guide-colors.vfb", import.meta.url),
+      ),
+    ),
+  );
+  for (
+    const record of document.records.filter((r) =>
+      r.id === 1296 || r.id === 2031
+    )
+  ) {
+    const guides = (record.value as { h: Array<{ color?: string }> }).h;
+    check(
+      JSON.stringify(guides.map((g) => g.color ?? null)) ===
+        JSON.stringify(["#ff0000", "#ff5f5f", "#00ff00", null, "#000000"]),
+      "COLORREF channels/sentinel",
+    );
+  }
+  const empty = decode(
+    read(
+      await Deno.readFile(
+        new URL("../../../tests/fixtures/metadata-absent.vfb", import.meta.url),
+      ),
+    ),
+  );
+  check(
+    JSON.stringify(empty.records.find((r) => r.id === 10)!.value) === "{}",
+    "version metadata must stay absent",
+  );
+});

@@ -392,14 +392,14 @@ def _special(kind: str, c: Cursor, masters: int):
     if kind == "guides":
         return _guides(c, masters)
     if kind == "version":
-        d = dict(platform="macos", version=[5, 2, 2, 128], owner=0)
+        d = {}
         while c.remaining:
             key = c.number("B")
             if key == 0:
                 return d
             v = c.ev()
             if key == 1:
-                d["platform"] = "windows" if v == 0 else "macos"
+                d["platform"] = {0: "windows", 1: "macos"}.get(v, v)
             elif key == 2:
                 d["version"] = [(v >> shift) & 255 for shift in (24, 16, 8, 0)]
             elif key == 3:
@@ -454,9 +454,10 @@ def _special(kind: str, c: Cursor, masters: int):
                 color = c.ev()
                 name = c.text(c.count())
                 g = dict(index=index)
-                if color >= 0:
-                    h = f"{color:06x}"
-                    g["color"] = "#" + h[4:] + h[2:4] + h[:2]
+                if color != -1:
+                    g["color"] = "#" + "".join(
+                        f"{(color >> shift) & 255:02x}" for shift in (0, 8, 16)
+                    )
                 if name:
                     g["name"] = name
                 guides.append(g)
@@ -544,7 +545,7 @@ def decode(document: VfbDocument) -> VfbDocument:
     """Decode in record order; preserve original bytes and report raw coverage."""
     encoding = "utf-8"
     masters = 1
-    windows = False
+    windows = True  # FontLab defaults bitmap polarity to the PC platform.
     document.diagnostics = []
     for r in document.records:
         schema = REGISTRY.get(str(r.id), {}).get("schema", "raw")
@@ -560,11 +561,17 @@ def decode(document: VfbDocument) -> VfbDocument:
             )
         if r.id == 10:
             v = r.value
-            windows = v["platform"] == "windows"
+            if "platform" in v:
+                windows = v["platform"] == "windows"
+            old_mac = (
+                v.get("platform") == "macos"
+                and "version" in v
+                and tuple(v["version"]) <= (5, 0, 4, 128)
+            )
             encoding = (
                 "cp1252"
-                if v["platform"] == "windows"
-                else ("mac_roman" if tuple(v["version"]) <= (5, 0, 4, 128) else "utf-8")
+                if v.get("platform") == "windows"
+                else "mac_roman" if old_mac else "utf-8"
             )
         if r.id == 1503:
             masters = r.value

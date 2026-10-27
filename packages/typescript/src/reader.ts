@@ -452,16 +452,12 @@ function special(kind: string, c: Cursor, masters: number): Json {
   }
   if (kind === "guides") return guides(c, masters);
   if (kind === "version") {
-    const d: ObjectValue = {
-      platform: "macos",
-      version: [5, 2, 2, 128],
-      owner: 0,
-    };
+    const d: ObjectValue = {};
     while (c.remaining) {
       const key = c.number("u8");
       if (key === 0) return d;
       const v = c.ev();
-      if (key === 1) d.platform = v === 0 ? "windows" : "macos";
+      if (key === 1) d.platform = v === 0 ? "windows" : v === 1 ? "macos" : v;
       else if (key === 2) {
         d.version = [24, 16, 8, 0].map((s) => (v >>> s) & 255);
       } else if (key === 3) d.owner = v;
@@ -507,9 +503,11 @@ function special(kind: string, c: Cursor, masters: number): Json {
         if (index === 0) break;
         const color = c.ev(), name = c.text(c.count());
         const g: ObjectValue = { index };
-        if (color >= 0) {
-          const h = color.toString(16).padStart(6, "0");
-          g.color = "#" + h.slice(4) + h.slice(2, 4) + h.slice(0, 2);
+        if (color !== -1) {
+          g.color = "#" +
+            [0, 8, 16].map((shift) =>
+              ((color >>> shift) & 255).toString(16).padStart(2, "0")
+            ).join("");
         }
         if (name) g.name = name;
         list.push(g);
@@ -592,7 +590,7 @@ function schema(s: Json, c: Cursor, masters: number): Json {
 }
 /** Decode in sequence so master count and text encoding follow the source. */
 export function decode(document: VfbDocument): VfbDocument {
-  let encoding = "utf-8", masters = 1, windows = false;
+  let encoding = "utf-8", masters = 1, windows = true; // FontLab defaults bitmap polarity to the PC platform.
   document.diagnostics = [];
   for (const r of document.records) {
     const s = registry[String(r.id)]?.schema ?? "raw",
@@ -610,12 +608,13 @@ export function decode(document: VfbDocument): VfbDocument {
     }
     if (r.id === 10) {
       const v = r.value as ObjectValue;
-      windows = v.platform === "windows";
-      const version = v.version as number[];
-      const old = version.reduce((n, b) => n * 256 + b, 0) <= 0x05000480;
+      if (v.platform !== undefined) windows = v.platform === "windows";
+      const version = v.version as number[] | undefined;
+      const oldMac = v.platform === "macos" && version !== undefined &&
+        version.reduce((n, b) => n * 256 + b, 0) <= 0x05000480;
       encoding = v.platform === "windows"
         ? "windows-1252"
-        : old
+        : oldMac
         ? "macintosh"
         : "utf-8";
     }

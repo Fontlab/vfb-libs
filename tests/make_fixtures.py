@@ -200,3 +200,40 @@ if __name__ == "__main__":
             record(1027, b"Fixture"), record(1027, "\ufeffFixture".encode("utf-8"))
         )
     )
+
+if __name__ == "__main__":
+    # FontLab COLORREF is 0x??BBGGRR; only -1 means unspecified.
+    colors = [
+        (0x4D0000FF, "red"),
+        (0x5F5F5FFF, "pink"),
+        (-2147418368, "green"),
+        (-1, "unset"),
+        (0, "black"),
+    ]
+    properties = b"".join(
+        integers(i + 1, color, len(name)) + name.encode()
+        for i, (color, name) in enumerate(colors)
+    ) + integers(0, 0)
+    guides = (
+        integers(len(colors))
+        + b"".join(integers(100 * i, 0) for i in range(len(colors)))
+        + integers(0)
+    )
+    old = glyph("A")
+    new = old[:-1] + bytes([4]) + guides + bytes([15])
+    data = font().replace(
+        record(2001, old),
+        record(1294, guides)
+        + record(1296, properties)
+        + record(2001, new)
+        + record(2031, properties),
+    )
+    (ROOT / "guide-colors.vfb").write_bytes(data)
+    (ROOT / "metadata-absent.vfb").write_bytes(
+        font()[:44] + record(1) + record(4) + record(10, b"\0") + record(5) + record(2)
+    )
+
+if __name__ == "__main__":
+    target = Path(__file__).resolve().parents[1] / "packages/rust/src/test-data"
+    for name in ["guide-colors.vfb", "metadata-absent.vfb"]:
+        (target / name).write_bytes((ROOT / name).read_bytes())

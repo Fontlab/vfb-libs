@@ -15,6 +15,15 @@ Python `read` also accepts a path. Rust supplies `read_file`. TypeScript accepts
 portable library. All implementations own a source copy. TS record byte ranges
 are views of that owned copy; do not mutate them while decoding.
 
+## Source semantics
+
+FontLab's VFB reader defines the interpretation of source records. `decode` does
+not center carets, add inferred stems, or convert fields to an editor's UI
+conventions. Such optional processing belongs after decoding and must not replace
+source values. Application-version fields absent from record 10 remain absent;
+unknown platform codes remain numeric. Legacy decoding fallbacks are internal,
+not synthesized authoring metadata.
+
 ## Document
 
 `header` contains signature and application/file version fields. `records` is an
@@ -53,6 +62,13 @@ Do not use an absolute value or overwrite the decoded record with a display valu
 The supplied outlines, component matrices, and guides are already positioned;
 changing the metadata convention must not transform them. Record **1047**
 (`slant_angle`) is a separate field, not an alias for `italic_angle`.
+
+## Guide colors
+
+Records 1296 and 2031 use FontLab COLORREF words: the low three bytes are red,
+green, and blue (`0x??BBGGRR`). The high byte does not encode alpha. Decoded colors
+are `#rrggbb`; -1 means no color and leaves the field absent. Other negative words
+still contain valid RGB bytes. Original words remain recoverable from record bytes.
 
 ## Errors and limits
 

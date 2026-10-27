@@ -5,6 +5,7 @@ Use --reference PATH for a checkout pinned to the commit in spec/reference.json.
 """
 
 import argparse
+import io
 import json
 import os
 from pathlib import Path
@@ -39,6 +40,37 @@ def equal(a, b, path="$"):
         if a == b:
             return
     raise AssertionError(f"{path}: {a!r} != {b!r}")
+
+
+def fontlab_guide_colors(raw):
+    """Independent COLORREF check: stored byte order is RR GG BB, high byte ignored."""
+    stream = io.BytesIO(raw)
+
+    def integer():
+        b = stream.read(1)[0]
+        if b <= 246:
+            return b - 139
+        if b <= 250:
+            return (b - 247) * 256 + stream.read(1)[0] + 108
+        if b <= 254:
+            return -(b - 251) * 256 - stream.read(1)[0] - 108
+        return int.from_bytes(stream.read(4), "big", signed=True)
+
+    result = {}
+    for direction in ["h", "v"]:
+        values = []
+        while integer() != 0:
+            word = integer()
+            stream.read(integer())
+            rgb = (
+                None
+                if word == -1
+                else "#" + bytes([(word >> shift) & 255 for shift in [0, 8, 16]]).hex()
+            )
+            values.append(rgb)
+        result[direction] = values
+    assert stream.read() == b""
+    return result
 
 
 def main():
@@ -127,6 +159,22 @@ def main():
                 if ours.id == 2007 and ours.value["size_units"][0] < 0:
                     other["size_units"][0] = other["size_units"][0] - (1 << 32)
                     known_differences.append("signed_bitmap_bounds")
+                if ours.id in (1296, 2031):
+                    before = json.dumps(other, sort_keys=True)
+                    for direction, colors in fontlab_guide_colors(ours.raw).items():
+                        assert len(other[direction]) == len(colors)
+                        for guide, color in zip(other[direction], colors):
+                            if color is None:
+                                guide.pop("color", None)
+                            else:
+                                guide["color"] = color
+                    if json.dumps(other, sort_keys=True) != before:
+                        known_differences.append("fontlab_colorref")
+                if ours.id == 10:
+                    # Fields absent on wire must not inherit the oracle's synthesized defaults.
+                    if ours.raw == b"\0":
+                        other = {}
+                        known_differences.append("absent_version_metadata")
                 equal(ours.value, other, f"record[{ours.id}]@{ours.offset}")
                 matched += 1
         print(
