@@ -150,6 +150,7 @@ class Cursor {
 
 /** Parse framing, retaining record order and source bytes. No decoding is implicit. */
 export function read(input: Uint8Array | ArrayBuffer): VfbDocument {
+  if (input.byteLength > 256 * 1024 * 1024) throw new VfbError("size_limit", 0);
   const source = input instanceof Uint8Array
     ? input.slice()
     : new Uint8Array(input.slice(0));

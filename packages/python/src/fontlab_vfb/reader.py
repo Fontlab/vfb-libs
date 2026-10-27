@@ -109,10 +109,16 @@ class Cursor:
 
 def read(source: bytes | bytearray | memoryview | str | Path) -> VfbDocument:
     """Read framing without discarding unknown entries; reject truncated files."""
-    data = (
-        Path(source).read_bytes() if isinstance(source, (str, Path)) else bytes(source)
-    )
-    if len(data) > 256 * 1024 * 1024:
+    limit = 256 * 1024 * 1024
+    if isinstance(source, (str, Path)):
+        with Path(source).open("rb") as stream:
+            data = stream.read(limit + 1)
+    else:
+        size = source.nbytes if isinstance(source, memoryview) else len(source)
+        if size > limit:
+            raise VfbError("size_limit", 0)
+        data = bytes(source)
+    if len(data) > limit:
         raise VfbError("size_limit", 0)
     c = Cursor(data)
     keys = [

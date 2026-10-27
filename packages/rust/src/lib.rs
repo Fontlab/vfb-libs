@@ -221,11 +221,17 @@ pub fn read(data: &[u8]) -> Result<VfbDocument> {
 }
 /// Read a filesystem path. I/O failures are distinguished from format errors.
 pub fn read_file(path: impl AsRef<Path>) -> Result<VfbDocument> {
-    let b = fs::read(path).map_err(|_| VfbError {
+    use std::io::Read;
+    let io_error = |_| VfbError {
         code: "io_error".into(),
         offset: 0,
         record_id: None,
-    })?;
+    };
+    let mut file = fs::File::open(path)
+        .map_err(io_error)?
+        .take(256 * 1024 * 1024 + 1);
+    let mut b = Vec::new();
+    file.read_to_end(&mut b).map_err(io_error)?;
     read(&b)
 }
 fn nodes(c: &mut Cursor) -> Result<Value> {
