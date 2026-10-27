@@ -1,0 +1,24 @@
+{
+  "name": "@fontlab/vfb",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "exports": "./dist/reader.js",
+  "types": "./dist/reader.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "cli.mjs"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "deno test tests"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  },
+  "bin": {
+    "vfb-json": "cli.mjs"
+  }
+}

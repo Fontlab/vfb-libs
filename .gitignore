@@ -1,0 +1,8 @@
+**/__pycache__/
+**/*.egg-info/
+**/node_modules/
+**/target/
+**/dist/
+**/build/
+.venv/
+.DS_Store

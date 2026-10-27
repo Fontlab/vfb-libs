@@ -1,0 +1,15 @@
+[package]
+name = "fontlab-vfb"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.97"
+license = "MIT"
+description = "Bounded, read-only FontLab VFB parser with cross-language conformance"
+readme = "README.md"
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+encoding_rs = "0.8"
+[[bin]]
+name = "vfb-json"
+path = "src/main.rs"

@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "fontlab-vfb"
+version = "0.1.0"
+description = "Native read-only FontLab VFB parsing with cross-language conformance"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{name = "FontLab"}]
+[project.scripts]
+vfb-json = "fontlab_vfb.__main__:main"
+[tool.setuptools.packages.find]
+where = ["src"]
+[tool.setuptools.package-data]
+fontlab_vfb = ["records.json", "tth.json", "py.typed"]

@@ -1,0 +1,118 @@
+{
+  "1": [
+    "AlignTop",
+    [
+      "pt",
+      "zone"
+    ]
+  ],
+  "2": [
+    "AlignBottom",
+    [
+      "pt",
+      "zone"
+    ]
+  ],
+  "3": [
+    "SingleLinkH",
+    [
+      "pt1",
+      "pt2",
+      "stem",
+      "align"
+    ]
+  ],
+  "4": [
+    "SingleLinkV",
+    [
+      "pt1",
+      "pt2",
+      "stem",
+      "align"
+    ]
+  ],
+  "5": [
+    "DoubleLinkH",
+    [
+      "pt1",
+      "pt2",
+      "stem"
+    ]
+  ],
+  "6": [
+    "DoubleLinkV",
+    [
+      "pt1",
+      "pt2",
+      "stem"
+    ]
+  ],
+  "7": [
+    "AlignH",
+    [
+      "pt",
+      "align"
+    ]
+  ],
+  "8": [
+    "AlignV",
+    [
+      "pt",
+      "align"
+    ]
+  ],
+  "13": [
+    "InterpolateH",
+    [
+      "pti",
+      "pt1",
+      "pt2",
+      "align"
+    ]
+  ],
+  "14": [
+    "InterpolateV",
+    [
+      "pti",
+      "pt1",
+      "pt2",
+      "align"
+    ]
+  ],
+  "20": [
+    "MDeltaH",
+    [
+      "pt",
+      "shift",
+      "ppm1",
+      "ppm2"
+    ]
+  ],
+  "21": [
+    "MDeltaV",
+    [
+      "pt",
+      "shift",
+      "ppm1",
+      "ppm2"
+    ]
+  ],
+  "22": [
+    "FDeltaH",
+    [
+      "pt",
+      "shift",
+      "ppm1",
+      "ppm2"
+    ]
+  ],
+  "23": [
+    "FDeltaV",
+    [
+      "pt",
+      "shift",
+      "ppm1",
+      "ppm2"
+    ]
+  ]
+}
