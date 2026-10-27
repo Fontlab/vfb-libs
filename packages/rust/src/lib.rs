@@ -121,11 +121,20 @@ impl<'a> Cursor<'a> {
     }
     fn text(&mut self, n: usize) -> Result<String> {
         let bytes = self.take(n)?;
-        let (v, _, bad) = self.encoding.decode(bytes);
+        let invalid_windows = bytes
+            .iter()
+            .any(|b| [0x81, 0x8d, 0x8f, 0x90, 0x9d].contains(b));
+        if self.encoding == encoding_rs::WINDOWS_1252 && invalid_windows {
+            return Err(self.error("invalid_encoding"));
+        }
+        let (v, bad) = self.encoding.decode_without_bom_handling(bytes);
         if !bad {
             return Ok(v.into_owned());
         }
-        let (v, _, bad) = encoding_rs::WINDOWS_1252.decode(bytes);
+        if invalid_windows {
+            return Err(self.error("invalid_encoding"));
+        }
+        let (v, bad) = encoding_rs::WINDOWS_1252.decode_without_bom_handling(bytes);
         if bad {
             return Err(self.error("invalid_encoding"));
         }

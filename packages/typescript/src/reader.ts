@@ -136,11 +136,20 @@ class Cursor {
   }
   text(n: number) {
     const bytes = this.take(n);
+    const windows = () => {
+      if (bytes.some((b) => [0x81, 0x8d, 0x8f, 0x90, 0x9d].includes(b))) {
+        return this.fail("invalid_encoding");
+      }
+      return new TextDecoder("windows-1252", { fatal: true, ignoreBOM: true })
+        .decode(bytes);
+    };
+    if (this.encoding === "windows-1252") return windows();
     try {
-      return new TextDecoder(this.encoding, { fatal: true }).decode(bytes);
+      return new TextDecoder(this.encoding, { fatal: true, ignoreBOM: true })
+        .decode(bytes);
     } catch {
       try {
-        return new TextDecoder("windows-1252", { fatal: true }).decode(bytes);
+        return windows();
       } catch {
         return this.fail("invalid_encoding");
       }

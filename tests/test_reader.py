@@ -19,6 +19,14 @@ class ReaderTests(unittest.TestCase):
             next(r.raw for r in d.records if r.id == 30000), b"opaque\0\xff"
         )
 
+    def test_undefined_windows_character_is_rejected(self):
+        b = (ROOT / "windows.vfb").read_bytes()
+        r = next(r for r in read(b).records if r.id == 1027)
+        damaged = bytearray(b)
+        damaged[r.payload_offset] = 0x81
+        with self.assertRaisesRegex(VfbError, "invalid_encoding"):
+            decode(read(damaged))
+
     def test_all_truncations(self):
         b = (ROOT / "static.vfb").read_bytes()
         for n in range(len(b)):

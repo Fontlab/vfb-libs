@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "packages/python/src"))
@@ -53,6 +54,33 @@ def main():
         assert actual == pin, "Reference checkout is not pinned"
         sys.path.insert(0, str(args.reference / "src"))
         from vfbLib.vfb.vfb import Vfb
+    # Invalid Windows bytes must not be replaced or interpreted differently by language.
+    damaged = bytearray((ROOT / "tests/fixtures/windows.vfb").read_bytes())
+    record = next(r for r in read(damaged).records if r.id == 1027)
+    damaged[record.payload_offset] = 0x81
+    from fontlab_vfb import VfbError
+
+    try:
+        decode(read(damaged))
+    except VfbError as error:
+        assert error.code == "invalid_encoding"
+    else:
+        raise AssertionError("Python accepted invalid Windows text")
+    with tempfile.TemporaryDirectory() as temp:
+        path = Path(temp) / "invalid.vfb"
+        path.write_bytes(damaged)
+        for command in [
+            ["deno", "run", "--allow-read", str(ROOT / "packages/typescript/cli.ts")],
+            [str(ROOT / "packages/rust/target/debug/vfb-json")],
+        ]:
+            result = subprocess.run(
+                [*command, str(path)], capture_output=True, text=True
+            )
+            assert (
+                result.returncode != 0
+                and not result.stdout
+                and "invalid_encoding" in result.stderr
+            )
     paths = sorted((ROOT / "tests/fixtures").glob("*.vfb")) + (
         [args.sample] if args.sample else []
     )

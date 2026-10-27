@@ -193,3 +193,10 @@ if __name__ == "__main__":
     (ROOT / "cubic.vfb").write_bytes(
         font(2).replace(record(2001, glyph("A", 2)), record(2001, cubic))
     )
+
+if __name__ == "__main__":
+    (ROOT / "utf8-bom.vfb").write_bytes(
+        font().replace(
+            record(1027, b"Fixture"), record(1027, "\ufeffFixture".encode("utf-8"))
+        )
+    )
